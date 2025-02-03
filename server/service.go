@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -33,12 +32,11 @@ import (
 )
 
 var (
-	errNoRelays                  = errors.New("no relays")
-	errInvalidSlot               = errors.New("invalid slot")
-	errInvalidHash               = errors.New("invalid hash")
-	errInvalidPubkey             = errors.New("invalid pubkey")
-	errNoSuccessfulRelayResponse = errors.New("no successful relay response")
-	errServerAlreadyRunning      = errors.New("server already running")
+	errNoRelays             = errors.New("no relays")
+	errInvalidSlot          = errors.New("invalid slot")
+	errInvalidHash          = errors.New("invalid hash")
+	errInvalidPubkey        = errors.New("invalid pubkey")
+	errServerAlreadyRunning = errors.New("server already running")
 )
 
 var (
@@ -238,58 +236,40 @@ func (m *BoostService) handleStatus(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-// handleRegisterValidator returns StatusOK if at least one relay returns StatusOK, else StatusBadGateway
+// handleRegisterValidator returns OK if at least one relay returns OK
 func (m *BoostService) handleRegisterValidator(w http.ResponseWriter, req *http.Request) {
-	log := m.log.WithField("method", "registerValidator")
-	log.Debug("registerValidator")
+	log := m.log.WithField("method", "getValidator")
+	log.Debug("handling request")
 
-	payload := []builderApiV1.SignedValidatorRegistration{}
-	if err := DecodeJSON(req.Body, &payload); err != nil {
+	// Decode validator registrations
+	validatorRegistrations := []builderApiV1.SignedValidatorRegistration{}
+	if err := DecodeJSON(req.Body, &validatorRegistrations); err != nil {
 		m.respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	// Add relevant fields to the logger
 	ua := UserAgent(req.Header.Get("User-Agent"))
 	log = log.WithFields(logrus.Fields{
-		"numRegistrations": len(payload),
+		"numRegistrations": len(validatorRegistrations),
 		"ua":               ua,
 	})
 
-	// Add request headers
-	headers := map[string]string{
-		HeaderStartTimeUnixMS: fmt.Sprintf("%d", time.Now().UTC().UnixMilli()),
+	// Send relays the validator registrations
+	err := m.registerValidator(log, ua, validatorRegistrations)
+	if err != nil {
+		m.respondError(w, http.StatusBadGateway, err.Error())
+		return
 	}
 
-	relayRespCh := make(chan error, len(m.relays))
-
-	for _, relay := range m.relays {
-		go func(relay types.RelayEntry) {
-			url := relay.GetURI(params.PathRegisterValidator)
-			log := log.WithField("url", url)
-
-			_, err := SendHTTPRequest(context.Background(), m.httpClientRegVal, http.MethodPost, url, ua, headers, payload, nil)
-			if err != nil {
-				log.WithError(err).Warn("error calling registerValidator on relay")
-			}
-			relayRespCh <- err
-		}(relay)
-	}
-
-	go m.sendValidatorRegistrationsToRelayMonitors(payload)
-
-	for i := 0; i < len(m.relays); i++ {
-		respErr := <-relayRespCh
-		if respErr == nil {
-			m.respondOK(w, nilResponse)
-			return
-		}
-	}
-
-	m.respondError(w, http.StatusBadGateway, errNoSuccessfulRelayResponse.Error())
+	m.respondOK(w, nilResponse)
 }
 
 // handleGetHeader requests bids from the relays
 func (m *BoostService) handleGetHeader(w http.ResponseWriter, req *http.Request) {
+	log := m.log.WithField("method", "getHeader")
+	log.Debug("handling request")
+
 	var (
 		vars          = mux.Vars(req)
 		parentHashHex = vars["parent_hash"]
@@ -297,6 +277,7 @@ func (m *BoostService) handleGetHeader(w http.ResponseWriter, req *http.Request)
 		ua            = UserAgent(req.Header.Get("User-Agent"))
 	)
 
+	// Parse the slot
 	slotValue, err := strconv.ParseUint(vars["slot"], 10, 64)
 	if err != nil {
 		m.respondError(w, http.StatusBadRequest, errInvalidSlot.Error())
@@ -304,14 +285,13 @@ func (m *BoostService) handleGetHeader(w http.ResponseWriter, req *http.Request)
 	}
 	slot := phase0.Slot(slotValue)
 
-	log := m.log.WithFields(logrus.Fields{
-		"method":     "getHeader",
+	// Add relevant fields to the logger
+	log = m.log.WithFields(logrus.Fields{
 		"slot":       slot,
 		"parentHash": parentHashHex,
 		"pubkey":     pubkey,
 		"ua":         ua,
 	})
-	log.Debug("getHeader")
 
 	// Query the relays for the header
 	result, err := m.getHeader(log, ua, slot, pubkey, parentHashHex)
@@ -320,6 +300,7 @@ func (m *BoostService) handleGetHeader(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
+	// Bail early if no bid was received
 	if result.response.IsEmpty() {
 		log.Info("no bid received")
 		w.WriteHeader(http.StatusNoContent)
@@ -360,7 +341,7 @@ func (m *BoostService) respondPayload(w http.ResponseWriter, log *logrus.Entry, 
 // handleGetPayload requests the payload from the relays
 func (m *BoostService) handleGetPayload(w http.ResponseWriter, req *http.Request) {
 	log := m.log.WithField("method", "getPayload")
-	log.Debug("getPayload request starts")
+	log.Debug("handling request")
 
 	// Read the body first, so we can log it later on error
 	body, err := io.ReadAll(req.Body)
