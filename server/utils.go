@@ -13,6 +13,10 @@ import (
 	"time"
 
 	builderSpec "github.com/attestantio/go-builder-client/spec"
+	eth2ApiV1Bellatrix "github.com/attestantio/go-eth2-client/api/v1/bellatrix"
+	eth2ApiV1Capella "github.com/attestantio/go-eth2-client/api/v1/capella"
+	eth2ApiV1Deneb "github.com/attestantio/go-eth2-client/api/v1/deneb"
+	eth2ApiV1Electra "github.com/attestantio/go-eth2-client/api/v1/electra"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -41,6 +45,14 @@ type UserAgent string
 
 // BlockHashHex is a hex-string representation of a block hash
 type BlockHashHex string
+
+// Payload is an interface representing a signed blinded beacon block from different forks
+type Payload interface {
+	*eth2ApiV1Bellatrix.SignedBlindedBeaconBlock |
+		*eth2ApiV1Capella.SignedBlindedBeaconBlock |
+		*eth2ApiV1Deneb.SignedBlindedBeaconBlock |
+		*eth2ApiV1Electra.SignedBlindedBeaconBlock
+}
 
 // SendHTTPRequest prepares and sends HTTP request, marshaling the payload if any, and decoding the response if dst is set
 func SendHTTPRequest(ctx context.Context, client http.Client, method, url string, userAgent UserAgent, headers map[string]string, payload, dst any) (code int, err error) {
@@ -236,4 +248,78 @@ func checkRelaySignature(bid *builderSpec.VersionedSignedBuilderBid, domain phas
 	}
 
 	return bls.VerifySignatureBytes(msg[:], sig[:], pubKey[:])
+}
+
+// prepareLogger adds relevant fields to the logger
+func prepareLogger[P Payload](log *logrus.Entry, payload P, userAgent UserAgent, slotUID string) *logrus.Entry {
+	switch block := any(payload).(type) {
+	case *eth2ApiV1Bellatrix.SignedBlindedBeaconBlock:
+		return log.WithFields(logrus.Fields{
+			"ua":         userAgent,
+			"slot":       block.Message.Slot,
+			"blockHash":  block.Message.Body.ExecutionPayloadHeader.BlockHash.String(),
+			"parentHash": block.Message.Body.ExecutionPayloadHeader.ParentHash.String(),
+			"slotUID":    slotUID,
+		})
+	case *eth2ApiV1Capella.SignedBlindedBeaconBlock:
+		return log.WithFields(logrus.Fields{
+			"ua":         userAgent,
+			"slot":       block.Message.Slot,
+			"blockHash":  block.Message.Body.ExecutionPayloadHeader.BlockHash.String(),
+			"parentHash": block.Message.Body.ExecutionPayloadHeader.ParentHash.String(),
+			"slotUID":    slotUID,
+		})
+	case *eth2ApiV1Deneb.SignedBlindedBeaconBlock:
+		return log.WithFields(logrus.Fields{
+			"ua":         userAgent,
+			"slot":       block.Message.Slot,
+			"blockHash":  block.Message.Body.ExecutionPayloadHeader.BlockHash.String(),
+			"parentHash": block.Message.Body.ExecutionPayloadHeader.ParentHash.String(),
+			"slotUID":    slotUID,
+		})
+	case *eth2ApiV1Electra.SignedBlindedBeaconBlock:
+		return log.WithFields(logrus.Fields{
+			"ua":         userAgent,
+			"slot":       block.Message.Slot,
+			"blockHash":  block.Message.Body.ExecutionPayloadHeader.BlockHash.String(),
+			"parentHash": block.Message.Body.ExecutionPayloadHeader.ParentHash.String(),
+			"slotUID":    slotUID,
+		})
+	}
+	return nil
+}
+
+// getSlot returns the block's slot
+func getSlot[P Payload](payload P) phase0.Slot {
+	switch block := any(payload).(type) {
+	case *eth2ApiV1Bellatrix.SignedBlindedBeaconBlock:
+		return block.Message.Slot
+	case *eth2ApiV1Capella.SignedBlindedBeaconBlock:
+		return block.Message.Slot
+	case *eth2ApiV1Deneb.SignedBlindedBeaconBlock:
+		return block.Message.Slot
+	case *eth2ApiV1Electra.SignedBlindedBeaconBlock:
+		return block.Message.Slot
+	}
+	return 0
+}
+
+// getBlockHash returns the block's hash
+func getBlockHash[P Payload](payload P) phase0.Hash32 {
+	switch block := any(payload).(type) {
+	case *eth2ApiV1Bellatrix.SignedBlindedBeaconBlock:
+		return block.Message.Body.ExecutionPayloadHeader.BlockHash
+	case *eth2ApiV1Capella.SignedBlindedBeaconBlock:
+		return block.Message.Body.ExecutionPayloadHeader.BlockHash
+	case *eth2ApiV1Deneb.SignedBlindedBeaconBlock:
+		return block.Message.Body.ExecutionPayloadHeader.BlockHash
+	case *eth2ApiV1Electra.SignedBlindedBeaconBlock:
+		return block.Message.Body.ExecutionPayloadHeader.BlockHash
+	}
+	return nilHash
+}
+
+// getBidKey makes a map key for a specific bid
+func getBidKey(slot phase0.Slot, blockHash phase0.Hash32) string {
+	return fmt.Sprintf("%v%v", slot, blockHash)
 }
