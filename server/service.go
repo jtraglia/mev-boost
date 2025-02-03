@@ -238,7 +238,7 @@ func (m *BoostService) handleStatus(w http.ResponseWriter, _ *http.Request) {
 
 // handleRegisterValidator returns OK if at least one relay returns OK
 func (m *BoostService) handleRegisterValidator(w http.ResponseWriter, req *http.Request) {
-	log := m.log.WithField("method", "getValidator")
+	log := m.log.WithField("method", "registerValidator")
 	log.Debug("handling request")
 
 	// Decode validator registrations
