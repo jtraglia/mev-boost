@@ -12,9 +12,7 @@ import (
 	"strings"
 	"time"
 
-	builderApi "github.com/attestantio/go-builder-client/api"
 	builderSpec "github.com/attestantio/go-builder-client/spec"
-	"github.com/attestantio/go-eth2-client/spec"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -238,32 +236,4 @@ func checkRelaySignature(bid *builderSpec.VersionedSignedBuilderBid, domain phas
 	}
 
 	return bls.VerifySignatureBytes(msg[:], sig[:], pubKey[:])
-}
-
-func getPayloadResponseIsEmpty(payload *builderApi.VersionedSubmitBlindedBlockResponse) bool {
-	switch payload.Version {
-	case spec.DataVersionBellatrix:
-		if payload.Bellatrix == nil || payload.Bellatrix.BlockHash == nilHash {
-			return true
-		}
-	case spec.DataVersionCapella:
-		if payload.Capella == nil || payload.Capella.BlockHash == nilHash {
-			return true
-		}
-	case spec.DataVersionDeneb:
-		if payload.Deneb == nil || payload.Deneb.ExecutionPayload == nil ||
-			payload.Deneb.ExecutionPayload.BlockHash == nilHash ||
-			payload.Deneb.BlobsBundle == nil {
-			return true
-		}
-	case spec.DataVersionElectra:
-		if payload.Electra == nil || payload.Electra.ExecutionPayload == nil ||
-			payload.Electra.ExecutionPayload.BlockHash == nilHash ||
-			payload.Electra.BlobsBundle == nil {
-			return true
-		}
-	case spec.DataVersionUnknown, spec.DataVersionPhase0, spec.DataVersionAltair:
-		return true
-	}
-	return false
 }

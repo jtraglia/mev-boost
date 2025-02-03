@@ -37,8 +37,8 @@ var (
 	errInvalidVersion      = errors.New("invalid version")
 	errEmptyPayload        = errors.New("empty payload")
 	errInvalidBlockHash    = errors.New("invalid block hash")
-	errLengthsMismatch     = errors.New("Number of blobs/commitments/proofs are not equal")
-	errCommitmentsMismatch = errors.New("KZG commitments do not match")
+	errLengthsMismatch     = errors.New("blobs/commitments/proofs lengths mismatch")
+	errCommitmentsMismatch = errors.New("commitments mismatch")
 )
 
 // processPayload requests the payload (execution payload, blobs bundle, etc) from the relays
@@ -118,6 +118,7 @@ func processPayload[P Payload](m *BoostService, log *logrus.Entry, ua UserAgent,
 			}
 
 			if err := verifyPayload(blindedBlock, log, responsePayload); err != nil {
+				log.WithError(err).Error("payload verification failed")
 				return
 			}
 
@@ -139,55 +140,39 @@ func processPayload[P Payload](m *BoostService, log *logrus.Entry, ua UserAgent,
 
 // verifyPayload checks that the payload is valid
 func verifyPayload[P Payload](payload P, log *logrus.Entry, response *builderApi.VersionedSubmitBlindedBlockResponse) error {
-	// Verify version
-	switch any(payload).(type) {
-	case *eth2ApiV1Bellatrix.SignedBlindedBeaconBlock:
-		if response.Version != spec.DataVersionBellatrix {
-			log.WithFields(logrus.Fields{
-				"version": response.Version,
-			}).Error("response version was not bellatrix")
-			return errInvalidVersion
-		}
-	case *eth2ApiV1Capella.SignedBlindedBeaconBlock:
-		if response.Version != spec.DataVersionCapella {
-			log.WithFields(logrus.Fields{
-				"version": response.Version,
-			}).Error("response version was not capella")
-			return errInvalidVersion
-		}
-	case *eth2ApiV1Deneb.SignedBlindedBeaconBlock:
-		if response.Version != spec.DataVersionDeneb {
-			log.WithFields(logrus.Fields{
-				"version": response.Version,
-			}).Error("response version was not deneb")
-			return errInvalidVersion
-		}
-	case *eth2ApiV1Electra.SignedBlindedBeaconBlock:
-		if response.Version != spec.DataVersionElectra {
-			log.WithFields(logrus.Fields{
-				"version": response.Version,
-			}).Error("response version was not electra")
-			return errInvalidVersion
-		}
-	}
-
-	// Verify payload is not empty
-	if getPayloadResponseIsEmpty(response) {
-		log.Error("response with empty data!")
-		return errEmptyPayload
-	}
-
-	// Verify post-conditions
 	switch block := any(payload).(type) {
 	case *eth2ApiV1Bellatrix.SignedBlindedBeaconBlock:
+		if response.Version != spec.DataVersionBellatrix {
+			return errInvalidVersion
+		}
+		if response.Bellatrix == nil ||
+			response.Bellatrix.BlockHash == nilHash {
+			return errEmptyPayload
+		}
 		if err := verifyBlockHash(log, payload, response.Bellatrix.BlockHash); err != nil {
 			return err
 		}
 	case *eth2ApiV1Capella.SignedBlindedBeaconBlock:
+		if response.Version != spec.DataVersionCapella {
+			return errInvalidVersion
+		}
+		if response.Capella == nil ||
+			response.Capella.BlockHash == nilHash {
+			return errEmptyPayload
+		}
 		if err := verifyBlockHash(log, payload, response.Capella.BlockHash); err != nil {
 			return err
 		}
 	case *eth2ApiV1Deneb.SignedBlindedBeaconBlock:
+		if response.Version != spec.DataVersionDeneb {
+			return errInvalidVersion
+		}
+		if response.Deneb == nil ||
+			response.Deneb.ExecutionPayload == nil ||
+			response.Deneb.ExecutionPayload.BlockHash == nilHash ||
+			response.Deneb.BlobsBundle == nil {
+			return errEmptyPayload
+		}
 		if err := verifyBlockHash(log, payload, response.Deneb.ExecutionPayload.BlockHash); err != nil {
 			return err
 		}
@@ -195,6 +180,15 @@ func verifyPayload[P Payload](payload P, log *logrus.Entry, response *builderApi
 			return err
 		}
 	case *eth2ApiV1Electra.SignedBlindedBeaconBlock:
+		if response.Version != spec.DataVersionElectra {
+			return errInvalidVersion
+		}
+		if response.Electra == nil ||
+			response.Electra.ExecutionPayload == nil ||
+			response.Electra.ExecutionPayload.BlockHash == nilHash ||
+			response.Electra.BlobsBundle == nil {
+			return errEmptyPayload
+		}
 		if err := verifyBlockHash(log, payload, response.Electra.ExecutionPayload.BlockHash); err != nil {
 			return err
 		}

@@ -10,11 +10,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	builderApi "github.com/attestantio/go-builder-client/api"
-	builderApiDeneb "github.com/attestantio/go-builder-client/api/deneb"
-	"github.com/attestantio/go-eth2-client/spec"
-	"github.com/attestantio/go-eth2-client/spec/deneb"
-	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/flashbots/mev-boost/config"
 	"github.com/stretchr/testify/require"
 )
@@ -98,86 +93,4 @@ func TestWeiBigIntToEthBigFloat(t *testing.T) {
 	// test with nil, which results on invalid big.Int input
 	f = weiBigIntToEthBigFloat(nil)
 	require.Equal(t, "0.000000000000000000", f.Text('f', 18))
-}
-
-func TestGetPayloadResponseIsEmpty(t *testing.T) {
-	testCases := []struct {
-		name     string
-		payload  *builderApi.VersionedSubmitBlindedBlockResponse
-		expected bool
-	}{
-		{
-			name: "Non-empty deneb payload response",
-			payload: &builderApi.VersionedSubmitBlindedBlockResponse{
-				Version: spec.DataVersionDeneb,
-				Deneb: &builderApiDeneb.ExecutionPayloadAndBlobsBundle{
-					ExecutionPayload: &deneb.ExecutionPayload{
-						BlockHash: phase0.Hash32{0x1},
-					},
-					BlobsBundle: &builderApiDeneb.BlobsBundle{
-						Blobs:       make([]deneb.Blob, 0),
-						Commitments: make([]deneb.KZGCommitment, 0),
-						Proofs:      make([]deneb.KZGProof, 0),
-					},
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "Empty deneb payload response",
-			payload: &builderApi.VersionedSubmitBlindedBlockResponse{
-				Version: spec.DataVersionDeneb,
-			},
-			expected: true,
-		},
-		{
-			name: "Empty deneb execution payload",
-			payload: &builderApi.VersionedSubmitBlindedBlockResponse{
-				Version: spec.DataVersionDeneb,
-				Deneb: &builderApiDeneb.ExecutionPayloadAndBlobsBundle{
-					BlobsBundle: &builderApiDeneb.BlobsBundle{
-						Blobs:       make([]deneb.Blob, 0),
-						Commitments: make([]deneb.KZGCommitment, 0),
-						Proofs:      make([]deneb.KZGProof, 0),
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "Empty deneb blobs bundle",
-			payload: &builderApi.VersionedSubmitBlindedBlockResponse{
-				Deneb: &builderApiDeneb.ExecutionPayloadAndBlobsBundle{
-					ExecutionPayload: &deneb.ExecutionPayload{
-						BlockHash: phase0.Hash32{0x1},
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "Nil block hash for deneb payload response",
-			payload: &builderApi.VersionedSubmitBlindedBlockResponse{
-				Deneb: &builderApiDeneb.ExecutionPayloadAndBlobsBundle{
-					ExecutionPayload: &deneb.ExecutionPayload{
-						BlockHash: nilHash,
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "Unsupported payload version",
-			payload: &builderApi.VersionedSubmitBlindedBlockResponse{
-				Version: spec.DataVersionAltair,
-			},
-			expected: true,
-		},
-	}
-
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expected, getPayloadResponseIsEmpty(tt.payload))
-		})
-	}
 }

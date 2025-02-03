@@ -348,7 +348,7 @@ func (m *BoostService) handleGetHeader(w http.ResponseWriter, req *http.Request)
 // respondPayload responds to the proposer with the payload
 func (m *BoostService) respondPayload(w http.ResponseWriter, log *logrus.Entry, result *builderApi.VersionedSubmitBlindedBlockResponse, originalBid bidResp) {
 	// If no payload has been received from relay, log loudly about withholding!
-	if result == nil || getPayloadResponseIsEmpty(result) {
+	if result == nil {
 		originRelays := types.RelayEntriesToStrings(originalBid.relays)
 		log.WithField("relaysWithBid", strings.Join(originRelays, ", ")).Error("no payload received from relay!")
 		m.respondError(w, http.StatusBadGateway, errNoSuccessfulRelayResponse.Error())
