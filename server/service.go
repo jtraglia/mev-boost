@@ -328,7 +328,7 @@ func (m *BoostService) handleGetHeader(w http.ResponseWriter, req *http.Request)
 
 	// Remember the bid, for future logging in case of withholding
 	m.bidsLock.Lock()
-	m.bids[bidKey(slot, result.bidInfo.blockHash)] = result
+	m.bids[getBidKey(slot, result.bidInfo.blockHash)] = result
 	m.bidsLock.Unlock()
 
 	// Log result

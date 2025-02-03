@@ -836,7 +836,7 @@ func TestGetPayloadForks(t *testing.T) {
 			fork:              "bellatrix",
 			signedBeaconBlock: new(eth2ApiV1Bellatrix.SignedBlindedBeaconBlock),
 			verifyPostState: func(t *testing.T, block any, resp *builderApi.VersionedSubmitBlindedBlockResponse) {
-				hash := blockHash(block.(*eth2ApiV1Bellatrix.SignedBlindedBeaconBlock))
+				hash := getBlockHash(block.(*eth2ApiV1Bellatrix.SignedBlindedBeaconBlock))
 				require.Equal(t, hash, resp.Bellatrix.BlockHash)
 			},
 		},
@@ -844,7 +844,7 @@ func TestGetPayloadForks(t *testing.T) {
 			fork:              "capella",
 			signedBeaconBlock: new(eth2ApiV1Capella.SignedBlindedBeaconBlock),
 			verifyPostState: func(t *testing.T, block any, resp *builderApi.VersionedSubmitBlindedBlockResponse) {
-				hash := blockHash(block.(*eth2ApiV1Capella.SignedBlindedBeaconBlock))
+				hash := getBlockHash(block.(*eth2ApiV1Capella.SignedBlindedBeaconBlock))
 				require.Equal(t, hash, resp.Capella.BlockHash)
 			},
 		},
@@ -852,7 +852,7 @@ func TestGetPayloadForks(t *testing.T) {
 			fork:              "deneb",
 			signedBeaconBlock: new(eth2ApiV1Deneb.SignedBlindedBeaconBlock),
 			verifyPostState: func(t *testing.T, block any, resp *builderApi.VersionedSubmitBlindedBlockResponse) {
-				hash := blockHash(block.(*eth2ApiV1Deneb.SignedBlindedBeaconBlock))
+				hash := getBlockHash(block.(*eth2ApiV1Deneb.SignedBlindedBeaconBlock))
 				require.Equal(t, hash, resp.Deneb.ExecutionPayload.BlockHash)
 			},
 		},
@@ -860,7 +860,7 @@ func TestGetPayloadForks(t *testing.T) {
 			fork:              "electra",
 			signedBeaconBlock: new(eth2ApiV1Electra.SignedBlindedBeaconBlock),
 			verifyPostState: func(t *testing.T, block any, resp *builderApi.VersionedSubmitBlindedBlockResponse) {
-				hash := blockHash(block.(*eth2ApiV1Electra.SignedBlindedBeaconBlock))
+				hash := getBlockHash(block.(*eth2ApiV1Electra.SignedBlindedBeaconBlock))
 				require.Equal(t, hash, resp.Electra.ExecutionPayload.BlockHash)
 			},
 		},

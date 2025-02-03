@@ -44,8 +44,8 @@ var (
 // processPayload requests the payload (execution payload, blobs bundle, etc) from the relays
 func processPayload[P Payload](m *BoostService, log *logrus.Entry, ua UserAgent, blindedBlock P) (*builderApi.VersionedSubmitBlindedBlockResponse, bidResp) {
 	var (
-		slot      = slot(blindedBlock)
-		blockHash = blockHash(blindedBlock)
+		slot      = getSlot(blindedBlock)
+		blockHash = getBlockHash(blindedBlock)
 	)
 
 	// Get the currentSlotUID for this slot
@@ -72,7 +72,7 @@ func processPayload[P Payload](m *BoostService, log *logrus.Entry, ua UserAgent,
 
 	// Get the bid!
 	m.bidsLock.Lock()
-	originalBid := m.bids[bidKey(slot, blockHash)]
+	originalBid := m.bids[getBidKey(slot, blockHash)]
 	m.bidsLock.Unlock()
 	if originalBid.response.IsEmpty() {
 		log.Error("no bid for this getPayload payload found, was getHeader called before?")
@@ -176,7 +176,7 @@ func verifyPayload[P Payload](payload P, log *logrus.Entry, response *builderApi
 		if err := verifyBlockHash(log, payload, response.Deneb.ExecutionPayload.BlockHash); err != nil {
 			return err
 		}
-		if err := verifyKZGCommitments(log, response.Deneb.BlobsBundle, block.Message.Body.BlobKZGCommitments); err != nil {
+		if err := verifyBlobsBundle(log, response.Deneb.BlobsBundle, block.Message.Body.BlobKZGCommitments); err != nil {
 			return err
 		}
 	case *eth2ApiV1Electra.SignedBlindedBeaconBlock:
@@ -192,7 +192,7 @@ func verifyPayload[P Payload](payload P, log *logrus.Entry, response *builderApi
 		if err := verifyBlockHash(log, payload, response.Electra.ExecutionPayload.BlockHash); err != nil {
 			return err
 		}
-		if err := verifyKZGCommitments(log, response.Electra.BlobsBundle, block.Message.Body.BlobKZGCommitments); err != nil {
+		if err := verifyBlobsBundle(log, response.Electra.BlobsBundle, block.Message.Body.BlobKZGCommitments); err != nil {
 			return err
 		}
 	}
@@ -201,7 +201,7 @@ func verifyPayload[P Payload](payload P, log *logrus.Entry, response *builderApi
 
 // verifyBlockHash checks that the block hash is correct
 func verifyBlockHash[P Payload](log *logrus.Entry, payload P, executionPayloadHash phase0.Hash32) error {
-	if blockHash(payload) != executionPayloadHash {
+	if getBlockHash(payload) != executionPayloadHash {
 		log.WithFields(logrus.Fields{
 			"responseBlockHash": executionPayloadHash.String(),
 		}).Error("requestBlockHash does not equal responseBlockHash")
@@ -210,8 +210,8 @@ func verifyBlockHash[P Payload](log *logrus.Entry, payload P, executionPayloadHa
 	return nil
 }
 
-// verifyKZGCommitments checks that blobs bundle is valid
-func verifyKZGCommitments(log *logrus.Entry, blobs *denebApi.BlobsBundle, commitments []deneb.KZGCommitment) error {
+// verifyBlobsBundle checks that blobs bundle is valid
+func verifyBlobsBundle(log *logrus.Entry, blobs *denebApi.BlobsBundle, commitments []deneb.KZGCommitment) error {
 	// Ensure that blobs are valid and matches the request
 	if len(commitments) != len(blobs.Blobs) || len(commitments) != len(blobs.Commitments) || len(commitments) != len(blobs.Proofs) {
 		log.WithFields(logrus.Fields{
@@ -275,8 +275,8 @@ func prepareLogger[P Payload](log *logrus.Entry, payload P, userAgent UserAgent,
 	return nil
 }
 
-// slot returns the block's slot
-func slot[P Payload](payload P) phase0.Slot {
+// getSlot returns the block's slot
+func getSlot[P Payload](payload P) phase0.Slot {
 	switch block := any(payload).(type) {
 	case *eth2ApiV1Bellatrix.SignedBlindedBeaconBlock:
 		return block.Message.Slot
@@ -290,8 +290,8 @@ func slot[P Payload](payload P) phase0.Slot {
 	return 0
 }
 
-// blockHash returns the block's hash
-func blockHash[P Payload](payload P) phase0.Hash32 {
+// getBlockHash returns the block's hash
+func getBlockHash[P Payload](payload P) phase0.Hash32 {
 	switch block := any(payload).(type) {
 	case *eth2ApiV1Bellatrix.SignedBlindedBeaconBlock:
 		return block.Message.Body.ExecutionPayloadHeader.BlockHash
@@ -305,8 +305,8 @@ func blockHash[P Payload](payload P) phase0.Hash32 {
 	return nilHash
 }
 
-// bidKey makes a map key for a specific bid
-func bidKey(slot phase0.Slot, blockHash phase0.Hash32) string {
+// getBidKey makes a map key for a specific bid
+func getBidKey(slot phase0.Slot, blockHash phase0.Hash32) string {
 	return fmt.Sprintf("%v%v", slot, blockHash)
 }
 
