@@ -34,11 +34,11 @@ type Payload interface {
 }
 
 var (
-	errInvalidVersion   = errors.New("invalid version")
-	errEmptyPayload     = errors.New("empty payload")
-	errInvalidBlockhash = errors.New("invalid blockhash")
-	errInvalidKZGLength = errors.New("invalid KZG commitments length")
-	errInvalidKZG       = errors.New("invalid KZG commitment")
+	errInvalidVersion      = errors.New("invalid version")
+	errEmptyPayload        = errors.New("empty payload")
+	errInvalidBlockHash    = errors.New("invalid block hash")
+	errLengthsMismatch     = errors.New("Number of blobs/commitments/proofs are not equal")
+	errCommitmentsMismatch = errors.New("KZG commitments do not match")
 )
 
 // processPayload requests the payload (execution payload, blobs bundle, etc) from the relays
@@ -95,7 +95,7 @@ func processPayload[P Payload](m *BoostService, log *logrus.Entry, ua UserAgent,
 		resultCh <- nil
 	}()
 
-	// Prepare the request context, which will be cancelled after the first successful response from a relay
+	// Prepare the request context, which will be canceled after the first successful response from a relay
 	requestCtx, requestCtxCancel := context.WithCancel(context.Background())
 	defer requestCtxCancel()
 
@@ -110,7 +110,7 @@ func processPayload[P Payload](m *BoostService, log *logrus.Entry, ua UserAgent,
 			if err != nil {
 				if errors.Is(requestCtx.Err(), context.Canceled) {
 					// This is expected if the payload has already been received by another relay
-					log.Info("request was cancelled")
+					log.Info("request was canceled")
 				} else {
 					log.WithError(err).Error("error making request to relay")
 				}
@@ -211,7 +211,7 @@ func verifyBlockHash[P Payload](log *logrus.Entry, payload P, executionPayloadHa
 		log.WithFields(logrus.Fields{
 			"responseBlockHash": executionPayloadHash.String(),
 		}).Error("requestBlockHash does not equal responseBlockHash")
-		return errInvalidBlockhash
+		return errInvalidBlockHash
 	}
 	return nil
 }
@@ -226,7 +226,7 @@ func verifyKZGCommitments(log *logrus.Entry, blobs *denebApi.BlobsBundle, commit
 			"responseBlobCommitments": len(blobs.Commitments),
 			"responseBlobProofs":      len(blobs.Proofs),
 		}).Error("different lengths for blobs/commitments/proofs")
-		return errInvalidKZGLength
+		return errLengthsMismatch
 	}
 
 	for i, commitment := range commitments {
@@ -236,7 +236,7 @@ func verifyKZGCommitments(log *logrus.Entry, blobs *denebApi.BlobsBundle, commit
 				"requestBlobCommitment":  commitment.String(),
 				"responseBlobCommitment": blobs.Commitments[i].String(),
 			}).Error("requestBlobCommitment does not equal responseBlobCommitment")
-			return errInvalidKZG
+			return errCommitmentsMismatch
 		}
 	}
 	return nil

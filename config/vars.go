@@ -16,13 +16,13 @@ var (
 	// ServerReadTimeoutMs sets the maximum duration for reading the entire request, including the body. A zero or negative value means there will be no timeout.
 	ServerReadTimeoutMs = common.GetEnvInt("MEV_BOOST_SERVER_READ_TIMEOUT_MS", 1000)
 
-	// ServerReadHeaderTimeoutMs sets the amount of time allowed to read request headers.
+	// ServerReadHeaderTimeoutMs sets the amount of time allowed to read request headers
 	ServerReadHeaderTimeoutMs = common.GetEnvInt("MEV_BOOST_SERVER_READ_HEADER_TIMEOUT_MS", 1000)
 
-	// ServerWriteTimeoutMs sets the maximum duration before timing out writes of the response.
+	// ServerWriteTimeoutMs sets the maximum duration before timing out writes of the response
 	ServerWriteTimeoutMs = common.GetEnvInt("MEV_BOOST_SERVER_WRITE_TIMEOUT_MS", 0)
 
-	// ServerIdleTimeoutMs sets the maximum amount of time to wait for the next request when keep-alives are enabled.
+	// ServerIdleTimeoutMs sets the maximum amount of time to wait for the next request when keep-alives are enabled
 	ServerIdleTimeoutMs = common.GetEnvInt("MEV_BOOST_SERVER_IDLE_TIMEOUT_MS", 0)
 
 	// ServerMaxHeaderBytes defines the max header byte size for requests (for dos prevention)
@@ -31,5 +31,6 @@ var (
 	// SkipRelaySignatureCheck can be used to disable relay signature check
 	SkipRelaySignatureCheck = os.Getenv("SKIP_RELAY_SIGNATURE_CHECK") == "1"
 
+	// SlotTimeSec defines how many seconds are in a slot
 	SlotTimeSec = uint64(common.GetEnvInt("SLOT_SEC", common.SlotTimeSecMainnet))
 )

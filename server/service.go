@@ -157,13 +157,11 @@ func (m *BoostService) respondOK(w http.ResponseWriter, response any) {
 
 func (m *BoostService) getRouter() http.Handler {
 	r := mux.NewRouter()
-	r.HandleFunc("/", m.handleRoot)
-
+	r.HandleFunc(params.PathRoot, m.handleRoot)
 	r.HandleFunc(params.PathStatus, m.handleStatus).Methods(http.MethodGet)
 	r.HandleFunc(params.PathRegisterValidator, m.handleRegisterValidator).Methods(http.MethodPost)
 	r.HandleFunc(params.PathGetHeader, m.handleGetHeader).Methods(http.MethodGet)
 	r.HandleFunc(params.PathGetPayload, m.handleGetPayload).Methods(http.MethodPost)
-
 	r.Use(mux.CORSMethodMiddleware(r))
 	loggedRouter := httplogger.LoggingMiddlewareLogrus(m.log, r)
 	return loggedRouter

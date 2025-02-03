@@ -44,7 +44,7 @@ type UserAgent string
 // BlockHashHex is a hex-string representation of a block hash
 type BlockHashHex string
 
-// SendHTTPRequest - prepare and send HTTP request, marshaling the payload if any, and decoding the response if dst is set
+// SendHTTPRequest prepares and sends HTTP request, marshaling the payload if any, and decoding the response if dst is set
 func SendHTTPRequest(ctx context.Context, client http.Client, method, url string, userAgent UserAgent, headers map[string]string, payload, dst any) (code int, err error) {
 	var req *http.Request
 
@@ -105,7 +105,7 @@ func SendHTTPRequest(ctx context.Context, client http.Client, method, url string
 	return resp.StatusCode, nil
 }
 
-// SendHTTPRequestWithRetries - prepare and send HTTP request, retrying the request if within the client timeout
+// SendHTTPRequestWithRetries prepares and sends HTTP request, retrying the request if within the client timeout
 func SendHTTPRequestWithRetries(ctx context.Context, client http.Client, method, url string, userAgent UserAgent, headers map[string]string, payload, dst any, maxRetries int, log *logrus.Entry) (code int, err error) {
 	var requestCtx context.Context
 	var cancel context.CancelFunc
@@ -130,7 +130,8 @@ func SendHTTPRequestWithRetries(ctx context.Context, client http.Client, method,
 		code, err = SendHTTPRequest(ctx, client, method, url, userAgent, headers, payload, dst)
 		if err != nil {
 			log.WithError(err).Warn("error making request to relay, retrying")
-			time.Sleep(100 * time.Millisecond) // note: this timeout is only applied between retries, it does not delay the initial request!
+			// This timeout is only applied between retries, it does not delay the initial request!
+			time.Sleep(100 * time.Millisecond)
 			continue
 		}
 		return code, nil
