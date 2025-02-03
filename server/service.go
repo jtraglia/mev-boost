@@ -385,7 +385,7 @@ func (m *BoostService) handleGetPayload(w http.ResponseWriter, req *http.Request
 			payload: new(eth2ApiV1Electra.SignedBlindedBeaconBlock),
 			processor: func(payload any) (*builderApi.VersionedSubmitBlindedBlockResponse, bidResp) {
 				//nolint: forcetypeassert
-				return processPayload(m, log, userAgent, payload.(*eth2ApiV1Electra.SignedBlindedBeaconBlock))
+				return getPayload(m, log, userAgent, payload.(*eth2ApiV1Electra.SignedBlindedBeaconBlock))
 			},
 		},
 		{
@@ -393,7 +393,7 @@ func (m *BoostService) handleGetPayload(w http.ResponseWriter, req *http.Request
 			payload: new(eth2ApiV1Deneb.SignedBlindedBeaconBlock),
 			processor: func(payload any) (*builderApi.VersionedSubmitBlindedBlockResponse, bidResp) {
 				//nolint: forcetypeassert
-				return processPayload(m, log, userAgent, payload.(*eth2ApiV1Deneb.SignedBlindedBeaconBlock))
+				return getPayload(m, log, userAgent, payload.(*eth2ApiV1Deneb.SignedBlindedBeaconBlock))
 			},
 		},
 		{
@@ -401,7 +401,7 @@ func (m *BoostService) handleGetPayload(w http.ResponseWriter, req *http.Request
 			payload: new(eth2ApiV1Capella.SignedBlindedBeaconBlock),
 			processor: func(payload any) (*builderApi.VersionedSubmitBlindedBlockResponse, bidResp) {
 				//nolint: forcetypeassert
-				return processPayload(m, log, userAgent, payload.(*eth2ApiV1Capella.SignedBlindedBeaconBlock))
+				return getPayload(m, log, userAgent, payload.(*eth2ApiV1Capella.SignedBlindedBeaconBlock))
 			},
 		},
 		{
@@ -409,7 +409,7 @@ func (m *BoostService) handleGetPayload(w http.ResponseWriter, req *http.Request
 			payload: new(eth2ApiV1Bellatrix.SignedBlindedBeaconBlock),
 			processor: func(payload any) (*builderApi.VersionedSubmitBlindedBlockResponse, bidResp) {
 				//nolint: forcetypeassert
-				return processPayload(m, log, userAgent, payload.(*eth2ApiV1Bellatrix.SignedBlindedBeaconBlock))
+				return getPayload(m, log, userAgent, payload.(*eth2ApiV1Bellatrix.SignedBlindedBeaconBlock))
 			},
 		},
 	}

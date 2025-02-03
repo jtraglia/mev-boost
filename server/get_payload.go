@@ -31,8 +31,8 @@ var (
 	errCommitmentsMismatch = errors.New("commitments mismatch")
 )
 
-// processPayload requests the payload (execution payload, blobs bundle, etc) from the relays
-func processPayload[P Payload](m *BoostService, log *logrus.Entry, ua UserAgent, blindedBlock P) (*builderApi.VersionedSubmitBlindedBlockResponse, bidResp) {
+// getPayload requests the payload (execution payload, blobs bundle, etc) from the relays
+func getPayload[P Payload](m *BoostService, log *logrus.Entry, ua UserAgent, blindedBlock P) (*builderApi.VersionedSubmitBlindedBlockResponse, bidResp) {
 	var (
 		slot      = getSlot(blindedBlock)
 		blockHash = getBlockHash(blindedBlock)
