@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -33,12 +32,11 @@ import (
 )
 
 var (
-	errNoRelays                  = errors.New("no relays")
-	errInvalidSlot               = errors.New("invalid slot")
-	errInvalidHash               = errors.New("invalid hash")
-	errInvalidPubkey             = errors.New("invalid pubkey")
-	errNoSuccessfulRelayResponse = errors.New("no successful relay response")
-	errServerAlreadyRunning      = errors.New("server already running")
+	errNoRelays             = errors.New("no relays")
+	errInvalidSlot          = errors.New("invalid slot")
+	errInvalidHash          = errors.New("invalid hash")
+	errInvalidPubkey        = errors.New("invalid pubkey")
+	errServerAlreadyRunning = errors.New("server already running")
 )
 
 var (
@@ -240,54 +238,33 @@ func (m *BoostService) handleStatus(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-// handleRegisterValidator returns StatusOK if at least one relay returns StatusOK, else StatusBadGateway
+// handleRegisterValidator returns OK if at least one relay returns OK
 func (m *BoostService) handleRegisterValidator(w http.ResponseWriter, req *http.Request) {
 	log := m.log.WithField("method", "registerValidator")
-	log.Debug("registerValidator")
+	log.Debug("handling request")
 
-	payload := []builderApiV1.SignedValidatorRegistration{}
-	if err := DecodeJSON(req.Body, &payload); err != nil {
+	// Decode validator registrations
+	validatorRegistrations := []builderApiV1.SignedValidatorRegistration{}
+	if err := DecodeJSON(req.Body, &validatorRegistrations); err != nil {
 		m.respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	// Add relevant fields to the logger
 	ua := UserAgent(req.Header.Get("User-Agent"))
 	log = log.WithFields(logrus.Fields{
-		"numRegistrations": len(payload),
+		"numRegistrations": len(validatorRegistrations),
 		"ua":               ua,
 	})
 
-	// Add request headers
-	headers := map[string]string{
-		HeaderStartTimeUnixMS: fmt.Sprintf("%d", time.Now().UTC().UnixMilli()),
+	// Send relays the validator registrations
+	err := m.registerValidator(log, ua, validatorRegistrations)
+	if err != nil {
+		m.respondError(w, http.StatusBadGateway, err.Error())
+		return
 	}
 
-	relayRespCh := make(chan error, len(m.relays))
-
-	for _, relay := range m.relays {
-		go func(relay types.RelayEntry) {
-			url := relay.GetURI(params.PathRegisterValidator)
-			log := log.WithField("url", url)
-
-			_, err := SendHTTPRequest(context.Background(), m.httpClientRegVal, http.MethodPost, url, ua, headers, payload, nil)
-			if err != nil {
-				log.WithError(err).Warn("error calling registerValidator on relay")
-			}
-			relayRespCh <- err
-		}(relay)
-	}
-
-	go m.sendValidatorRegistrationsToRelayMonitors(payload)
-
-	for i := 0; i < len(m.relays); i++ {
-		respErr := <-relayRespCh
-		if respErr == nil {
-			m.respondOK(w, nilResponse)
-			return
-		}
-	}
-
-	m.respondError(w, http.StatusBadGateway, errNoSuccessfulRelayResponse.Error())
+	m.respondOK(w, nilResponse)
 }
 
 // handleGetHeader requests bids from the relays
